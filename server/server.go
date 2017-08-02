@@ -1,13 +1,19 @@
 package main
 
 import "net"
+import "os"
 import "os/exec"
 import "crypto/sha256"
+import "crypto/rsa"
+import "crypto/x509"
+import "crypto/rand"
 import "io/ioutil"
-import "os"
 import "bytes"
+import "fmt"
 
 var pwHash [sha256.Size]byte
+var pub *rsa.PublicKey
+var priv *rsa.PrivateKey
 
 func handleconn(conn net.Conn) {
 	b := make([]byte, 232)
@@ -24,31 +30,66 @@ func handleconn(conn net.Conn) {
 		if err == nil {
 			conn.Write(output.Bytes())
 		} else {
-			conn.Write([]byte("Error")])
+			conn.Write([]byte("Error"))
 		}
 	}
 	conn.Close()
 }
 func main() {
-	if len(os.Args) < 2 || os.Args[1] != "pwgen" {
+	if len(os.Args) > 1 && os.Args[1] == "pwgen" {
+		x := sha256.Sum256([]byte(os.Args[2]))
+		x = sha256.Sum256(x[:])
+		ioutil.WriteFile("passwdHash",
+			x[:],
+			0600)
+		fmt.Println("Success")
+	} else if len(os.Args) > 1 && os.Args[1] == "privgen" {
+		priv, _ = rsa.GenerateKey(rand.Reader, 2048)
+		ioutil.WriteFile("rsaPriv",
+			x509.MarshalPKCS1PrivateKey(priv),
+			0600)
+		fmt.Println("Success")
+	} else if len(os.Args) > 1 && os.Args[1] == "pubgen" {
+		privFile, err := ioutil.ReadFile("rsaPriv")
+		if err != nil {
+			return
+		}
+		priv, err = x509.ParsePKCS1PrivateKey(privFile)
+		if err != nil {
+			return
+		}
+
+		x, err := x509.MarshalPKIXPublicKey(priv.Public())
+		ioutil.WriteFile("rsaPub",
+			x,
+			0600)
+		fmt.Println("Success")
+	} else {
 		pwHashSlice, err := ioutil.ReadFile("passwdHash")
 		if err != nil {
 			return
 		}
 		copy(pwHash[:], pwHashSlice)
-		ln, err2 := net.Listen("tcp", ":3924")
-		if err2 != nil {
+
+		privFile, err := ioutil.ReadFile("rsaPriv")
+		if err != nil {
+			return
+		}
+		priv, err = x509.ParsePKCS1PrivateKey(privFile)
+		if err != nil {
+			return
+		}
+
+		p := priv.Public()
+		pub = p.(*rsa.PublicKey)
+
+		ln, err := net.Listen("tcp", ":3924")
+		if err != nil {
 			return
 		}
 		for {
 			conn, _ := ln.Accept()
 			go handleconn(conn)
 		}
-	} else {
-		x := sha256.Sum256([]byte(os.Args[2]))
-		x = sha256.Sum256(x[:])
-		ioutil.WriteFile("passwdHash",
-			x[:],
-			0600)
 	}
 }
