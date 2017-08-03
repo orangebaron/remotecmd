@@ -16,10 +16,14 @@ var pub *rsa.PublicKey
 
 func encode(msg []byte) []byte {
 	enc, _ := rsa.EncryptOAEP(sha256.New(), rand.Reader, pub, msg, []byte("label"))
+	if len(enc) == 0 {
+		fmt.Println("Command is too long.")
+		os.Exit(1)
+	}
 	retVal := make([]byte, 0)
 	for {
 		if len(enc) < 255 {
-			retVal = append(retVal, byte(uint8(len(enc)+1))) //all this casting crap necessary?
+			retVal = append(retVal, byte(len(enc))) //all this casting crap necessary?
 			retVal = append(retVal, enc...)
 			retVal = append(retVal, byte(0))
 			break
@@ -45,6 +49,20 @@ func runCmd(ip, cmd string) string {
 	buf.ReadFrom(conn)
 	return buf.String()
 }
+func loadPub() {
+	pubFile, err := ioutil.ReadFile("rsaPub")
+	if err != nil {
+		return
+	}
+	x, err := x509.ParsePKIXPublicKey(pubFile)
+	if err != nil {
+		return
+	}
+	pub = x.(*rsa.PublicKey)
+	if pub == nil {
+		return
+	}
+}
 func main() {
 	if os.Args[1] == "pwgen" {
 		x := sha256.Sum256([]byte(os.Args[2]))
@@ -52,22 +70,14 @@ func main() {
 			x[:],
 			0600)
 	} else if os.Args[1] == "console" {
-		pubFile, err := ioutil.ReadFile("rsaPub")
-		if err != nil {
-			return
-		}
-		x, err := x509.ParsePKIXPublicKey(pubFile)
-		if err != nil {
-			return
-		}
-		pub = x.(*rsa.PublicKey)
-
+		loadPub()
 		for {
 			read := bufio.NewReader(os.Stdin)
 			cmd, _ := read.ReadString('\n')
 			fmt.Println(runCmd(os.Args[2], cmd))
 		}
 	} else if os.Args[1] == "cmd" {
+		loadPub()
 		fmt.Println(runCmd(os.Args[2], os.Args[3]))
 	}
 }
