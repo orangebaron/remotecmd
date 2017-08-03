@@ -1,6 +1,6 @@
 # Server Setup
 To set a password, go to the server folder and run `rcserver.exe pwgen [password]`.
-To generate the public and private keys, run `rcserver.exe privgen` then `rcserver.exe pubgen`.
+To generate random public and private keys, run `rcserver.exe privgen` then `rcserver.exe pubgen`.
 The private key is used by the server, and the public key should be sent to those gaining access (it doesn't need to stay in the server folder).
 Finally, to run the server, run rcserver.exe.
 # Client Setup
